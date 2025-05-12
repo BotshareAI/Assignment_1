@@ -9,9 +9,9 @@ from db_writer import write_to_database          # Writes the assigned results i
 
 # 1. Load all required CSV data files (training, ideal, test)
 training_df, ideal_df, test_df = load_all_data(
-    "data/training_data.csv",
-    "data/ideal_functions.csv",
-    "data/test_data.csv"
+    "../data/training_data.csv",
+    "../data/ideal_functions.csv",
+    "../data/test_data.csv"
 )
 
 # Safety check: if any file failed to load, exit the program gracefully
