@@ -15,8 +15,9 @@ training_df, ideal_df, test_df = load_all_data(
 )
 
 # Safety check: if any file failed to load, exit the program gracefully
-if None in (training_df, ideal_df, test_df):
-    print("Error loading one or more datasets. Exiting.")
+# Use safe check for None
+if any(x is None for x in (training_df, ideal_df, test_df)):
+    print("[ERROR] Error loading one or more datasets. Exiting.")
     exit(1)
 
 # 2. Match each training function (y1–y4) to the best ideal function using least squares
