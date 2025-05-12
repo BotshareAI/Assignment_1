@@ -1,1 +1,1 @@
-# Contains core logic for LSQ matching
+# Function matching logic

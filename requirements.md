@@ -15,23 +15,24 @@
 
 IdealFunction/
 │
-├── data/ # CSV files provided
-│ ├── training_data.csv
-│ ├── ideal_functions.csv
-│ └── test_data.csv
+├── data/
+│   └── .gitkeep
 │
-├── src/ # Python modules
-│ ├── main.py # Script to execute all steps
-│ ├── data_loader.py # Functions to load CSV and DB
-│ ├── function_matcher.py # Matching and evaluation logic
-│ ├── test_matcher.py # Test file with unit tests
-│ └── visualizer.py # Plotting using Bokeh
+├── src/
+│   ├── main.py
+│   ├── data_loader.py
+│   ├── function_matcher.py
+│   ├── test_matcher.py
+│   └── visualizer.py
 │
 ├── db/
-│ └── ideal_function.db # Generated database
+│   └── .gitkeep
 │
-├── README.md # Project overview and task
-└── requirements.md # Requirements and expectations
+├── tests/
+│   └── __init__.py
+│
+├── README.md
+└── requirements.md
 
 ---
 
