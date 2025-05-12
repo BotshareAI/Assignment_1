@@ -2,38 +2,67 @@
 # Entry point for the Ideal Function Assignment project.
 # Executes all major steps: data loading, LSQ matching, test assignment, and database storage.
 
-from data_loader import load_all_data            # Module to load CSV datasets
-from function_matcher import find_best_ideal_matches  # Finds best-fit ideal functions for training
-from test_assigner import assign_test_points     # Assign test data to matched ideal functions
-from db_writer import write_to_database          # Writes the assigned results into SQLite
+import sys  # Required to exit the program on error
 
-# 1. Load all required CSV data files (training, ideal, test)
+from data_loader import load_all_data                  # Module to load CSV datasets
+from function_matcher import find_best_ideal_matches   # Finds best-fit ideal functions for training
+from test_assigner import assign_test_points           # Assigns test data to matched ideal functions
+from db_writer import write_to_database                # Writes the assigned results into SQLite
+
+
+# -----------------------------------------------
+# Step 1: Load all required CSV data files
+# - training_data.csv: Contains x, y1–y4 (training set)
+# - ideal_functions.csv: Contains x, y1–y50 (perfect functions)
+# - test_data.csv: Contains x, y (unlabeled values to match)
+# -----------------------------------------------
 training_df, ideal_df, test_df = load_all_data(
-    "../data/training_data.csv",
-    "../data/ideal_functions.csv",
-    "../data/test_data.csv"
+    "data/training_data.csv",
+    "data/ideal_functions.csv",
+    "data/test_data.csv"
 )
 
-# Safety check: if any file failed to load, exit the program gracefully
-# Use safe check for None
-if any(x is None for x in (training_df, ideal_df, test_df)):
-    print("[ERROR] Error loading one or more datasets. Exiting.")
-    exit(1)
+# -----------------------------------------------
+# Step 2: Check if any file failed to load
+# - If any DataFrame is None, exit gracefully
+# -----------------------------------------------
+if any(df is None for df in (training_df, ideal_df, test_df)):
+    print("[ERROR] One or more datasets failed to load. Exiting.")
+    sys.exit(1)  # Exit the program with error code 1
 
-# 2. Match each training function (y1–y4) to the best ideal function using least squares
-# Returns: dict with keys like 'y1', values like 'y12' (ideal function name)
+
+# -----------------------------------------------
+# Step 3: Match training functions to ideal functions
+# - For each training function y1–y4, find the best-fit ideal function (y1–y50)
+# - Uses Least Squares Error (LSE) to evaluate similarity
+# - Returns a dictionary like: {'y1': 'y13', 'y2': 'y27', ...}
+# -----------------------------------------------
 matched_functions = find_best_ideal_matches(training_df, ideal_df)
 
-# 3. Use test data and find closest matching ideal function (from matched list)
-# Only assign if deviation is within 1.1 * max deviation from training
-assigned_df = assign_test_points(test_df, ideal_df, matched_functions)
 
-# 4. Persist the assigned matches (x, y, delta_y, ideal_function) to SQLite database
+# -----------------------------------------------
+# Step 4: Assign test points to the best-fit ideal functions
+# - For each (x, y) in test set, compare against y_ideal(x)
+# - Accept match if deviation <= max_delta × √2 (per assignment rules)
+# - Returns a new DataFrame with matched test points
+# -----------------------------------------------
+assigned_df = assign_test_points(test_df, ideal_df, training_df, matched_functions)
+
+
+# -----------------------------------------------
+# Step 5: Save results to SQLite database
+# - Stores assigned x, y, delta_y, and ideal_function
+# - Creates table if it doesn't exist
+# -----------------------------------------------
 write_to_database(assigned_df, db_path="db/ideal_function.db")
 
-# 5. (Optional) You can call a visualization here (if implemented)
+
+# -----------------------------------------------
+# Step 6: Optional visualization step (if implemented)
+# -----------------------------------------------
 # from visualizer import plot_matches
 # plot_matches(training_df, ideal_df, matched_functions)
 
+
 # Final confirmation
-print("Project execution complete. Matched data saved to SQLite.")
+print("[INFO] Project execution complete. Matched test data saved to database.")

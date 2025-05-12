@@ -1,78 +1,90 @@
 # test_assigner.py
 # ---------------------------------------------------------
-# This module assigns each test data point to the best-matching
-# ideal function based on deviation thresholding.
-# The deviation must be within (max delta × √2) for a valid match.
-# Only matched points are returned in the final DataFrame.
+# This module assigns each test data point to one of the best-matched
+# ideal functions using a thresholding rule.
+# A point is accepted only if its deviation from the ideal value is within
+# (max_delta × √2), where max_delta is the max deviation from training to ideal.
 # ---------------------------------------------------------
 
-import pandas as pd   # For structured tabular data handling
-import numpy as np    # For fast numerical operations
-
+import pandas as pd   # For DataFrame handling (tables of tabular data)
+import numpy as np    # For efficient numeric computation (sqrt, abs, etc.)
 
 def assign_test_points(test_df, ideal_df, training_df, best_match_dict):
     """
-    Assigns test points to ideal functions based on deviation from known ideal values.
+    Assign each test data point to a matched ideal function,
+    based on a thresholded deviation rule.
 
     Parameters:
-    - test_df: pd.DataFrame
-        Test dataset with columns ['x', 'y']
-    - ideal_df: pd.DataFrame
-        Dataset of 50 ideal functions, columns ['x', 'y1' ... 'y50']
-    - training_df: pd.DataFrame
-        Training dataset used to determine deviation bounds
-    - best_match_dict: dict
-        Maps training columns (e.g., 'y1') to best-fit ideal function columns (e.g., 'y17')
+    ----------
+    test_df : pd.DataFrame
+        Test dataset with x and y values (e.g., from sensors or measurement).
+
+    ideal_df : pd.DataFrame
+        Ideal function dataset (columns: 'x', 'y1', ..., 'y50').
+
+    training_df : pd.DataFrame
+        Contains 'y1' to 'y4' training functions used to calculate deviation thresholds.
+
+    best_match_dict : dict
+        Mapping of training functions to their best-fit ideal functions.
+        Example: {'y1': 'y14', 'y2': 'y8', ...}
 
     Returns:
-    - pd.DataFrame with matched test points only, including:
-        ['x', 'y', 'delta_y', 'ideal_function']
+    -------
+    pd.DataFrame
+        A filtered DataFrame with only matched points:
+        Columns: ['x', 'y', 'delta_y', 'ideal_function']
     """
 
-    results = []  # This will store all matched test point data
+    results = []  # Initialize an empty list to store matching results
 
-    # Iterate over each test point
+    # Automatically detect the y-column name (should be second column after 'x')
+    y_column = [col for col in test_df.columns if col != 'x'][0]
+
+    # Iterate through every test point (row-by-row in test_df)
     for idx, test_row in test_df.iterrows():
-        x_test = test_row['x']   # x-coordinate of the test point
-        y_test = test_row['y']   # observed y-value at x
+        x_test = test_row['x']         # Extract the x value
+        y_test = test_row[y_column]    # Extract the measured y value (not necessarily named 'y')
 
-        best_fit = None          # Placeholder for best match
-        smallest_deviation = float('inf')  # Start with very high deviation
+        best_fit = None                    # Will hold the best match for this point
+        smallest_deviation = float('inf') # Start with a very high deviation
 
-        # Try matching against each selected ideal function (via training mapping)
+        # Go through all training-to-ideal mappings
         for train_col, ideal_col in best_match_dict.items():
-            # Calculate max delta between training and ideal function
+
+            # Calculate maximum allowed deviation between this training function and ideal function
             delta = np.max(np.abs(training_df[train_col] - ideal_df[ideal_col]))
 
-            # Get y value of the ideal function at x_test
             try:
+                # Find the y_ideal value at the test x coordinate
                 y_ideal = ideal_df.loc[ideal_df['x'] == x_test, ideal_col].values[0]
             except IndexError:
-                # x value not found in ideal_df; skip this row
+                # If no matching x value in ideal_df, skip this pair
                 continue
 
-            # Calculate deviation from the ideal function
+            # Compute how far the test point's y is from the ideal
             delta_y = np.abs(y_test - y_ideal)
 
-            # Accept if deviation is within allowed threshold
+            # Accept only if deviation is within allowed limit (√2 * delta)
             if delta_y <= np.sqrt(2) * delta:
+                # Keep the best match with the smallest deviation
                 if delta_y < smallest_deviation:
                     smallest_deviation = delta_y
                     best_fit = {
                         'x': x_test,
-                        'y': y_test,                  # use 'y' for consistency with DB schema
+                        'y': y_test,
                         'delta_y': delta_y,
-                        'ideal_function': ideal_col   # renamed to match DB schema
+                        'ideal_function': ideal_col
                     }
 
-        # Store only if a valid match was found
+        # Save match if one was found
         if best_fit:
             results.append(best_fit)
 
-    # Create a DataFrame of only matched test points
+    # Convert list of dictionaries to a DataFrame
     matched_df = pd.DataFrame(results)
 
-    # Remove rows with no matched function (just for safety/clean output)
-    matched_df = matched_df[matched_df["ideal_function"].notnull()]
+    # Ensure all rows have a valid match
+    matched_df = matched_df[matched_df['ideal_function'].notnull()]
 
-    return matched_df  # Ready for DB insertion or visualization
+    return matched_df
