@@ -1,40 +1,63 @@
+# function_matcher.py
+# This module finds the best matching ideal functions for each training function
+# using the Least Squares Error (LSE) method.
+
+import numpy as np  # NumPy is used for efficient numerical calculations
+
+def calculate_lsq(y_train, y_ideal):
+    """
+    Calculates the Least Squares Error (LSE) between two series of y-values.
+    
+    Parameters:
+    - y_train (pd.Series): The training function's y-values
+    - y_ideal (pd.Series): The ideal function's y-values
+
+    Returns:
+    - float: The total squared error (a measure of how well the ideal matches the training)
+    """
+    # Compute the sum of squared differences between each corresponding y-value
+    return np.sum((y_train - y_ideal) ** 2)
+
 # Function to find the best ideal function (from ideal_df) for each training function (in training_df)
-# using the Least Squares method.
 def find_best_ideal_matches(training_df, ideal_df):
-    # Dictionary to store the best matching ideal function for each training function
-    # Format: {'y1': 'y12', 'y2': 'y7', ...}
+    """
+    Finds the best-matching ideal function for each training function using LSE.
+
+    Parameters:
+    - training_df (pd.DataFrame): DataFrame with training functions (y1–y4)
+    - ideal_df (pd.DataFrame): DataFrame with 50 ideal functions (y1–y50)
+
+    Returns:
+    - dict: Mapping like {'y1': 'y13', 'y2': 'y27', ...} showing the best-matching ideal for each training function
+    """
+    # Create a dictionary to store the best match for each training function
     best_fit_mapping = {}
 
-    # Loop over each column (function) in the training dataset
+    # Loop through each column in the training dataset
     for train_col in training_df.columns:
-        # Skip the 'x' column, we only want to compare function values (y1, y2, etc.)
+        # Skip the 'x' column because we are only interested in matching y-values
         if train_col == "x":
             continue
 
-        # Initialize the minimum least squares error with a very large number
+        # Set a high initial value for the minimum LSE
         min_error = float("inf")
+        best_ideal_col = None  # Variable to track the best-matching ideal function
 
-        # Variable to store the best-matching ideal function name for this training function
-        best_ideal_col = None
-
-        # Now compare current training function to all ideal functions
+        # Compare the current training function to each ideal function
         for ideal_col in ideal_df.columns:
-            # Again, skip the 'x' column, we only care about y-values
             if ideal_col == "x":
-                continue
+                continue  # Skip the 'x' column
 
-            # Calculate the least squares error between training and ideal function
-            # Both columns must correspond to the same x values
+            # Compute the least squares error between the training and ideal y-values
             lsq_error = calculate_lsq(training_df[train_col], ideal_df[ideal_col])
 
-            # If this ideal function has a smaller error, it's a better match
+            # Update the best match if the current ideal function gives a lower error
             if lsq_error < min_error:
-                min_error = lsq_error             # Update minimum error found so far
-                best_ideal_col = ideal_col        # Update the best matching ideal function name
+                min_error = lsq_error
+                best_ideal_col = ideal_col
 
-        # Once all ideal functions have been checked for this training function,
-        # store the best match in the dictionary
+        # After checking all ideal functions, store the best match for this training function
         best_fit_mapping[train_col] = best_ideal_col
 
-    # After all training functions are processed, return the final mapping dictionary
+    # Return the final dictionary of best matches
     return best_fit_mapping
